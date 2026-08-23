@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MANII-05-MD WhatsApp Pairing</title>
+  <style>
+    :root { color-scheme: dark; font-family: Arial, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 22px; background: radial-gradient(circle at top, #183b36, #071313 58%); color: #eefcf8; }
+    .card { width: min(100%, 460px); padding: 28px; border: 1px solid #2f6e60; border-radius: 22px; background: rgba(11, 31, 29, .94); box-shadow: 0 18px 60px rgba(0,0,0,.35); }
+    h1 { margin: 0 0 8px; font-size: 25px; }
+    .muted { color: #a8c9c0; line-height: 1.55; }
+    label { display: block; margin: 22px 0 8px; font-weight: 700; }
+    input { width: 100%; padding: 14px; border: 1px solid #4a8678; border-radius: 12px; background: #0d2421; color: #fff; font-size: 17px; outline: none; }
+    input:focus { border-color: #63e6be; box-shadow: 0 0 0 3px rgba(99,230,190,.14); }
+    button { width: 100%; margin-top: 16px; padding: 14px; border: 0; border-radius: 12px; background: #48d597; color: #052019; font-size: 16px; font-weight: 800; cursor: pointer; }
+    button:disabled { opacity: .55; cursor: wait; }
+    .status { margin-top: 18px; padding: 12px; border-radius: 12px; background: #102b27; color: #bde8dc; line-height: 1.45; }
+    .code { display: none; margin-top: 18px; padding: 18px 10px; border: 1px dashed #63e6be; border-radius: 14px; text-align: center; color: #63e6be; font: 800 29px/1.2 monospace; letter-spacing: 5px; user-select: all; }
+    .steps { margin: 20px 0 0; padding-left: 20px; color: #d5eee8; line-height: 1.7; }
+    .note { margin-top: 18px; font-size: 13px; color: #8eb6aa; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>MANII-05-MD WhatsApp Pairing</h1>
+    <p class="muted">Apna WhatsApp number country code ke saath enter karein. Example: <b>923001234567</b>. Number ke start mein <b>+</b> ya spaces na dein.</p>
+    <form id="pairForm">
+      <label for="phone">WhatsApp number</label>
+      <input id="phone" name="phone" inputmode="numeric" autocomplete="tel" placeholder="923001234567" required>
+      <button id="submit" type="submit">Get Pairing Code</button>
+    </form>
+    <div id="status" class="status">Bot connection status check ho raha hai...</div>
+    <div id="code" class="code"></div>
+    <ol class="steps">
+      <li>WhatsApp open karein.</li>
+      <li>Settings → Linked devices par jayein.</li>
+      <li>Link a device → Link with phone number instead select karein.</li>
+      <li>Yahan milne wala code WhatsApp mein enter karein.</li>
+    </ol>
+    <div class="note">Pairing code kisi ke saath share na karein. Sirf apne bot/server ke liye use karein.</div>
+  </main>
+  <script>
+    const form = document.getElementById('pairForm');
+    const phone = document.getElementById('phone');
+    const submit = document.getElementById('submit');
+    const statusBox = document.getElementById('status');
+    const codeBox = document.getElementById('code');
+
+    async function refreshStatus() {
+      try {
+        const response = await fetch('/api/pair/status');
+        const data = await response.json();
+        statusBox.textContent = data.message;
+        if (data.connected) {
+          submit.disabled = true;
+          codeBox.style.display = 'none';
+        }
+      } catch (_) {
+        statusBox.textContent = 'Server se connection nahi ho raha. Thori dair baad retry karein.';
+      }
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      submit.disabled = true;
+      codeBox.style.display = 'none';
+      statusBox.textContent = 'Pairing code request ho rahi hai...';
+      try {
+        const response = await fetch('/api/pair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: phone.value })
+        });
+        const data = await response.json();
+        statusBox.textContent = data.message;
+        if (data.code) {
+          codeBox.textContent = data.code;
+          codeBox.style.display = 'block';
+        }
+      } catch (_) {
+        statusBox.textContent = 'Request fail ho gayi. Server logs check karein.';
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    refreshStatus();
+    setInterval(refreshStatus, 5000);
+  </script>
+</body>
+</html>
